@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import KanbanBoard from "../KanbanBoard";
-import { Column } from "../../types";
+import { Column, Task } from "../../types";
 
 const Login = () => {
   const [login, setLogin] = useState<boolean>(true);
@@ -9,6 +9,7 @@ const Login = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [throttle, setThrottle] = useState<boolean>(false);
   const [columnx, setColumnx] = useState<Column[]>([]);
+  const [taskz, setTaskz] = useState<Task[]>([]);
 
   // UseRef with correct types for input fields
   const luname = useRef<HTMLInputElement | null>(null);
@@ -45,6 +46,7 @@ const Login = () => {
       setSignup(true);
       return;
     }
+
     if (!x || !y) {
       console.log("Enter both username and password");
       return;
@@ -55,13 +57,17 @@ const Login = () => {
         `http://localhost:3000/login?name=${x}&password=${y}`,
         { method: "GET" }
       );
-
       if (!response.ok) {
         throw new Error("Failed to login. Please check your credentials.");
         return;
       }
       const data = await response.json();
-      console.log(data.Column);
+
+      const response2 = await fetch(
+        `http://localhost:3000/gettaskdata?userid=${data._id}`
+      );
+      const data2 = await response2.json();
+      setTaskz(data2);
 
       if (data !== "no users") {
         setColumnx(data.Column);
@@ -120,10 +126,10 @@ const Login = () => {
       }
 
       const data = await response.json();
-      // console.log(data);
-      if (data.length >= 1) {
+      console.log(data);
+      if (data.email) {
         setColumnx(data.Column);
-        alert("Register Successful");
+        console.log("Register Successful");
         setLogged(true);
         setUdata(x || "");
         sessionStorage.setItem("username", JSON.stringify(x));
@@ -153,7 +159,12 @@ const Login = () => {
         className={`flex flex-col bg-black w-full h-screen
           ${logged ? "flex" : "hidden"} justify-center items-center`}
       >
-        <KanbanBoard udata={udata} setLogged={setLogged} columnx={columnx} />
+        <KanbanBoard
+          udata={udata}
+          setLogged={setLogged}
+          columnx={columnx}
+          taskz={taskz}
+        />
       </section>
       {/* Login part */}
       <section

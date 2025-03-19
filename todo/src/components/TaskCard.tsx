@@ -13,6 +13,7 @@ interface Props {
 const TaskCard = ({ task, deleteTask, updateTask }: Props) => {
   const [mouseIsOver, setMouseIsOver] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [taskContent, setTaskContent] = useState(task.content);
 
   const {
     setNodeRef,
@@ -31,12 +32,13 @@ const TaskCard = ({ task, deleteTask, updateTask }: Props) => {
   });
   const style = { transition, transform: CSS.Transform.toString(transform) };
 
+  // Ensuring that the component does not return early in an inconsistent way
   if (isDragging) {
     return (
       <div
         ref={setNodeRef}
         style={style}
-        className="bg-slate-800 p-4 h-[100px] min-h-[100px] items-center border-2 border-rose-500  flex text-left rounded-xl  cursor-grab relative opacity-40"
+        className="bg-slate-800 p-4 h-[100px] min-h-[100px] items-center border-2 border-rose-500 flex text-left rounded-xl cursor-grab relative opacity-40"
       />
     );
   }
@@ -46,46 +48,44 @@ const TaskCard = ({ task, deleteTask, updateTask }: Props) => {
     setMouseIsOver(false);
   };
 
-  if (editMode) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        className="bg-slate-800 p-4 h-[100px] min-h-[100px] items-center  flex text-left rounded-xl hover:ring-2 hover:ring-rose-500  cursor-grab relative"
-      >
-        <textarea
-          value={task.content}
-          placeholder="Task Content Here"
-          onBlur={toggleEditMode}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              toggleEditMode();
-            }
-          }}
-          onChange={(e) => updateTask(task.id, e.target.value)}
-          autoFocus
-          className="
-        h-[90%] w-full resize-none border-none rounded-lg bg-transparent text-white focus:outline-none task"
-        ></textarea>
-      </div>
-    );
-  }
+  const handleTaskUpdate = () => {
+    if (taskContent !== task.content) {
+      updateTask(task.id, taskContent);
+    }
+    toggleEditMode();
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+      className="bg-slate-800 p-4 h-[100px] min-h-[100px] items-center flex text-left rounded-xl hover:ring-2 hover:ring-rose-500 cursor-grab relative flex-col"
       onClick={toggleEditMode}
-      className="bg-slate-800 p-4 h-[100px] min-h-[100px] items-center  flex text-left rounded-xl hover:ring-2 hover:ring-rose-500  cursor-grab relative"
       onMouseEnter={() => setMouseIsOver(true)}
       onMouseLeave={() => setMouseIsOver(false)}
     >
-      <p className="m-auto h-[90%] w-[90%] overflow-y-auto  break-words whitespace-pre-wrap task">
-        {task.content}
-      </p>
+      {editMode ? (
+        <textarea
+          value={taskContent}
+          placeholder="Task Content Here"
+          onBlur={handleTaskUpdate}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              handleTaskUpdate();
+            }
+          }}
+          onChange={(e) => setTaskContent(e.target.value)}
+          autoFocus
+          className="h-[90%] w-full resize-none border-none rounded-lg bg-transparent text-white focus:outline-none task"
+        />
+      ) : (
+        <p className="m-auto h-[90%] w-[90%] overflow-y-auto break-words whitespace-pre-wrap task">
+          {task.content}
+        </p>
+      )}
+
       {mouseIsOver && (
         <button
           onClick={() => deleteTask(task.id)}
@@ -94,6 +94,12 @@ const TaskCard = ({ task, deleteTask, updateTask }: Props) => {
           <TrashIcon />
         </button>
       )}
+      <div className="w-full px-6 py-1 text-[10px] flex flex-row absolute bottom-0 justify-between items-center ">
+        <p>Date: {task.date}</p>
+        <p>
+          Priority: <span className="text-orange-400">{task.priority}</span>
+        </p>
+      </div>
     </div>
   );
 };

@@ -11,6 +11,8 @@ export type Task = {
   columnId: Id;
   content: string;
   priority: string;
+  date: string;
+  userid: string | null;
 };
 
 export type Day = {

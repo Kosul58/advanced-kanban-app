@@ -23,12 +23,14 @@ interface KanbanBoardProps {
   udata: string;
   setLogged: React.Dispatch<React.SetStateAction<boolean>>;
   columnx: Column[];
+  taskz: Task[];
 }
 
 const KanbanBoard: React.FC<KanbanBoardProps> = ({
   udata,
   setLogged,
   columnx,
+  taskz,
 }) => {
   //present date
   const [presDate, setPresDate] = useState("");
@@ -36,7 +38,23 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [columns, setColumns] = useState<Column[]>(columnx);
   //get columns data fromt the db then set it
   useEffect(() => {
-    setColumns(columnx);
+    const presentDate = new Date().toISOString().split("T")[0];
+    let [x, y, z] = presentDate.split("-").map((x) => Number(x));
+    const newcol1 = columnx.filter((x: any) => {
+      if (x.id <= 3) {
+        return x;
+      }
+    });
+    const newcol2 = columnx.filter((val: any) => {
+      if (val.id > 3) {
+        let [a, b, c] = val.date.split("-").map((t: string) => Number(t));
+        if (a === x && b === y && c === z) {
+          return val;
+        }
+      }
+    });
+    const totalcol = [...newcol1, ...newcol2];
+    setColumns(totalcol);
   }, [columnx]); // Runs whenever columnx updates
 
   const [activeColumn, setActiveColumn] = useState<Column | null>(null);
@@ -44,8 +62,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return Math.floor(Math.random() * 10001);
   };
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [task, setTask] = useState<Task[]>([]);
+  const [task, setTask] = useState<Task[]>(taskz);
 
+  useEffect(() => {
+    setTask(taskz);
+  }, [taskz]);
   const ColumnInDb = async (type: string, col: Column) => {
     const uid = sessionStorage.getItem("userid");
     if (type === "add") {
@@ -76,7 +97,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const columnToAdd: Column = {
       id: generatedId(),
       title: `Column ${columns.length - 3 + 1}`,
-      date: presDate,
+      date: selectedDate || presDate,
     };
     await ColumnInDb("add", columnToAdd);
     setColumns([...columns, columnToAdd]);
@@ -89,25 +110,26 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       return;
     } else {
       const filteredColumn = columns.filter((col) => col.id !== id);
-
       const colToDel = columns.filter((col) => col.id === id);
-      await ColumnInDb("add", colToDel[0]);
-
+      await ColumnInDb("delete", colToDel[0]);
       setColumns(filteredColumn);
       const newTask = task.filter((t) => t.columnId !== id);
       setTask(newTask);
     }
   }
 
-  const columnsId = useMemo(() => columns.map((col) => col.id), [columns]);
+  const columnsId = useMemo(
+    () => columns.map((col) => col.id.toString()),
+    [columns]
+  );
 
+  const [taskondrag, settaskondrag] = useState<boolean>(false);
   //handle drag start
   function onDragStart(event: DragStartEvent) {
     if (event.active.data.current?.type === "Column") {
       setActiveColumn(event.active.data.current.column);
       return;
     }
-
     if (event.active.data.current?.type === "Task") {
       setActiveTask(event.active.data.current.task);
       return;
@@ -136,7 +158,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         if (
           !activeTask ||
           !overTask ||
-          activeTask.columnId !== overTask.columnId
+          activeTask.columnId === overTask.columnId
         )
           return tasks;
 
@@ -151,6 +173,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           task.id === activeId ? { ...task, columnId: overId } : task
         );
       });
+
+      settaskondrag(true);
     } else if (!isActiveTask && !isOverTask) {
       // Swapping columns (moving columns)
       setColumns((columns) => {
@@ -158,6 +182,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           (col) => col.id === activeId
         );
         const overColumnIndex = columns.findIndex((col) => col.id === overId);
+
         return arrayMove(columns, activeColumnIndex, overColumnIndex);
       });
     }
@@ -175,26 +200,28 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const isActiveATask = active.data.current.type === "Task";
     const isOverATask = over.data.current.type === "Task";
 
-    // If both are tasks, move within the same column
+    // const isActiveAColumn = active.data.current.type === "Column";
+    // const isOverAColumn = over.data.current.type === "Column";
+
+    // Moving a task within the same column
     if (isActiveATask && isOverATask) {
       setTask((tasks) => {
         const activeTask = tasks.find((t) => t.id === activeId);
         const overTask = tasks.find((t) => t.id === overId);
-
         if (
           !activeTask ||
           !overTask ||
           activeTask.columnId !== overTask.columnId
-        )
+        ) {
           return tasks;
-
+        }
         const activeIndex = tasks.findIndex((t) => t.id === activeId);
         const overIndex = tasks.findIndex((t) => t.id === overId);
         return arrayMove(tasks, activeIndex, overIndex);
       });
     }
 
-    // Handle moving task to a different column
+    // Moving a task to a different column
     else if (isActiveATask && !isOverATask) {
       setTask((tasks) => {
         return tasks.map((task) =>
@@ -202,6 +229,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         );
       });
     }
+
+    // Moving a column over another column
+    // else if (isActiveAColumn && isOverAColumn) {
+    // }
   };
 
   const sensors = useSensors(
@@ -212,71 +243,209 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     })
   );
 
-  const updateColumn = (id: Id, title: string) => {
+  const updateColumn = async (id: Id, title: string) => {
     const newColumns = columns.map((col) => {
       if (col.id !== id) return col;
       return { ...col, title };
     });
+
+    console.log("column lai update gar");
     setColumns(newColumns);
   };
 
-  const createTask = (columnId: Id) => {
+  const createTask = async (
+    columnId: Id,
+    content: string,
+    priority: string
+  ) => {
+    const userid = sessionStorage.getItem("userid");
+    const presentDate = new Date().toISOString().split("T")[0];
     const newTask: Task = {
       id: generatedId(),
       columnId,
-      content: `Task ${task.length + 1}`,
-      priority: "",
+      content: content,
+      priority: priority,
+      date: selectedDate || presentDate,
+      userid: userid,
     };
+
     setTask([...task, newTask]);
+
+    // console.log(newTask);
+    const response = await fetch(`http://localhost:3000/addtask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newTask),
+    });
+    const data = await response.json();
   };
 
-  const deleteTask = (id: Id) => {
+  const deleteTask = async (id: Id) => {
     const newTasks = task.filter((task) => task.id !== id);
     setTask(newTasks);
+
+    const tasktodelete = task.filter((task) => task.id === id);
+    const response = await fetch(`http://localhost:3000/deletetask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(tasktodelete[0]),
+    });
+    const data = await response.json();
   };
 
-  const updateTask = (id: Id, content: string) => {
+  const updateTask = async (id: Id, content: string) => {
     const newTasks = task.map((task) => {
       if (task.id !== id) return task;
       return { ...task, content };
     });
     setTask(newTasks);
+    const response = await fetch(`http://localhost:3000/updatetask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id, content }),
+    });
+    const data = await response.json();
   };
 
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
-  // This function will handle the data received from the Calendar component
-  const sendDataToParent = (date: string) => {
-    setSelectedDate(date); // You can store the received date in a state
-    console.log("Received date from calendar:", date); // Console log the selected date
-  };
+  //recieve data from calendar component and set the columns accordingly
+  const sendDataToParent = async (date: string) => {
+    setSelectedDate(date); //store received data
+    console.log("Received date from calendar:", date); // Console log selected date
+    console.log("date change huda yo dekhiyo ta");
+    try {
+      let [x, y, z] = date.split("-").map((x) => Number(x));
+      const getuserdata = async () => {
+        const uid = sessionStorage.getItem("userid");
+        if (!uid) {
+          return;
+        }
+        const presentDate = new Date().toISOString().split("T")[0];
+        setPresDate(presentDate);
+        const userid = sessionStorage.getItem("userid");
+        const response = await fetch(
+          `http://localhost:3000/pagereload?id=${userid}`
+        );
 
-  const showDate = () => {
-    console.log(selectedDate);
+        const data = await response.json();
+        // console.log(data.Column);
+
+        const newcol1 = data.Column.filter((x: any) => {
+          if (x.id <= 3) {
+            return x;
+          }
+        });
+        console.log(newcol1);
+        const newcol2 = data.Column.filter((val: any) => {
+          if (val.id > 3) {
+            let [a, b, c] = val.date.split("-").map((t: string) => Number(t));
+            if (a === x && b === y && c === z) {
+              return val;
+            }
+          }
+        });
+        console.log(newcol2);
+        const totalcol = [...newcol1, ...newcol2];
+        setColumns(totalcol);
+        // console.log("data reloaded succesfully");
+        // setColumns(data.Column);
+      };
+      await getuserdata();
+    } catch (e) {
+      console.log("Error:", e);
+    }
   };
 
   const handleLogout = () => {
     sessionStorage.removeItem("username");
+    sessionStorage.removeItem("userid");
     setLogged(false);
   };
 
   //fetch page data on page reload
   useEffect(() => {
     const getuserdata = async () => {
+      const uid = sessionStorage.getItem("userid");
+      if (!uid) {
+        return;
+      }
       const presentDate = new Date().toISOString().split("T")[0];
       setPresDate(presentDate);
+      let [x, y, z] = presentDate.split("-").map((x) => Number(x));
       const userid = sessionStorage.getItem("userid");
-      console.log(userid);
       const response = await fetch(
         `http://localhost:3000/pagereload?id=${userid}`
       );
-
       const data = await response.json();
-      console.log(data);
-      setColumns(data.Column);
+      const newcol1 = data.Column.filter((x: any) => {
+        if (x.id <= 3) {
+          return x;
+        }
+      });
+      const newcol2 = data.Column.filter((val: any) => {
+        if (val.id > 3) {
+          let [a, b, c] = val.date.split("-").map((t: string) => Number(t));
+          if (a === x && b === y && c === z) {
+            return val;
+          }
+        }
+      });
+      console.log(newcol1, newcol2);
+      const totalcol = [...newcol1, ...newcol2];
+      setColumns(totalcol);
+
+      const response2 = await fetch(
+        `http://localhost:3000/gettaskdata?userid=${uid}`
+      );
+      const data2 = await response2.json();
+      if (data2 !== "no tasks") {
+        console.log(data2);
+        setTask((prev) => [...data2]);
+      }
+      console.log("data reloaded succesfully");
     };
     getuserdata();
+    // gettask();
   }, []);
+
+  // const gettask = async () => {
+  //   const uid = sessionStorage.getItem("userid");
+  //   const response2 = await fetch(
+  //     `http://localhost:3000/gettaskdata?userid=${uid}`
+  //   );
+  //   const data2 = await response2.json();
+  //   if (data2 !== "no tasks") {
+  //     console.log(data2);
+  //     setTask((prev) => [...data2]);
+  //   }
+  // };
+
+  const replacetasksindb = async () => {
+    const userid = sessionStorage.getItem("userid");
+    const response = await fetch("http://localhost:3000/replacetasks", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ task, userid }),
+    });
+    const data = await response.json();
+    console.log("xx");
+    settaskondrag(false);
+  };
+
+  useEffect(() => {
+    if (taskondrag === false) return;
+    replacetasksindb();
+  }, [task]);
+
   return (
     <div className="m-auto flex min-h-screen w-full items-center overflow-x-auto overflow-y-hidden">
       <DndContext
@@ -295,7 +464,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   deleteColumn={deleteColumn}
                   updateColumn={updateColumn}
                   createTask={createTask}
-                  task={task.filter((task) => task.columnId === col.id)}
+                  task={task.filter(
+                    (task) => Number(task.columnId) === Number(col.id)
+                  )}
                   deleteTask={deleteTask}
                   updateTask={updateTask}
                 />

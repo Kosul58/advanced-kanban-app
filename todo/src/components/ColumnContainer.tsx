@@ -6,11 +6,13 @@ import { useMemo, useState } from "react";
 import Plusicon from "../icons/Plusicon";
 import TaskCard from "./TaskCard";
 import { SortableContext } from "@dnd-kit/sortable";
+import { MdCancel } from "react-icons/md";
+
 interface Props {
   column: Column;
   deleteColumn: (id: Id) => void;
   updateColumn: (id: Id, title: string) => void;
-  createTask: (columnId: Id) => void;
+  createTask: (columnId: Id, content: string, priority: string) => void;
   task: Task[];
   deleteTask: (id: Id) => void;
   updateTask: (id: Id, content: string) => void;
@@ -22,9 +24,9 @@ const ColumnContainer = (props: Props) => {
     deleteColumn,
     updateColumn,
     createTask,
-    task,
     deleteTask,
     updateTask,
+    task,
   } = props;
 
   const [editMode, setEditMode] = useState(false);
@@ -51,26 +53,51 @@ const ColumnContainer = (props: Props) => {
     return task.map((task) => task.id);
   }, [task]);
 
+  const [taskModal, setTaskModal] = useState<boolean>(false);
+  const [taskContent, setTaskContent] = useState<string>("");
+  const [activePriority, setActivePriority] = useState<string | null>(null);
+
+  const handleSelect = (priority: string) => {
+    setActivePriority(priority);
+  };
+
+  const addTask = (id: Id) => {
+    if (!taskContent || !activePriority) {
+      console.log("Complete task information");
+      return;
+    }
+    createTask(id, taskContent, activePriority);
+    setTaskModal(false);
+    setTaskContent("");
+    setActivePriority(null);
+    alert("Task added Successfully");
+  };
+
   if (isDragging) {
     return (
       <div
         ref={setNodeRef}
         style={style}
-        className="bg-slate-600 min-w-[350px] w-[350px] h-[500px] max-h-[500px] rounded-md flex flex-col opacity-50"
+        className="bg-slate-600 min-w-[350px] w-[350px] h-[500px] max-h-[500px] rounded-md flex flex-col opacity-50 border-2 border-red-400"
       ></div>
     );
   }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-slate-700 min-w-[350px] w-[350px] h-[500px] max-h-[500px] rounded-md flex flex-col"
+      className="bg-slate-700 min-w-[350px] w-[350px] h-[500px] max-h-[500px] rounded-md flex flex-col relative"
     >
+      {/* Column Header */}
       <div
         {...attributes}
         {...listeners}
-        onClick={() => setEditMode(true)}
-        className="text-md cursor-grab h-[60px] bg-slate-800 p-3 font-bold border-4 border-slate-700 rounded-2xl flex items-center justify-between"
+        onClick={() => {
+          if (Number(column.id) <= 3) return;
+          setEditMode(true);
+        }}
+        className="text-md cursor-grab h-[60px] bg-slate-800 p-3 font-bold border-4 border-slate-700 rounded-2xl flex items-center justify-between relative"
       >
         <div className="flex gap-2">
           <div className="flex justify-center in-checked: px-2 py-1 text-sm rounded-full">
@@ -83,15 +110,13 @@ const ColumnContainer = (props: Props) => {
               value={column.title}
               onChange={(e) => updateColumn(column.id, e.target.value)}
               autoFocus
-              onBlur={() => {
-                setEditMode(false);
-              }}
+              onBlur={() => setEditMode(false)}
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
                 setEditMode(false);
               }}
               className="px-4 outline-indigo-600"
-            ></input>
+            />
           )}
         </div>
         <button
@@ -101,6 +126,8 @@ const ColumnContainer = (props: Props) => {
           <TrashIcon />
         </button>
       </div>
+
+      {/* Task List */}
       <div className="flex flex-grow flex-col gap-4 p-2 overflow-x-hidden overflow-y-auto">
         <SortableContext items={tasksIds}>
           {task.map((task) => (
@@ -113,14 +140,56 @@ const ColumnContainer = (props: Props) => {
           ))}
         </SortableContext>
       </div>
-      <div className="w-[100%] h-fit flex items-center justify-center  p-2">
+
+      {/* Add Task Button */}
+      <div className="w-[100%] h-fit flex items-center justify-center p-2">
         <button
-          onClick={() => createTask(column.id)}
-          className="flex gap-2 items-center justify-center bg-gray-900  cursor-pointer px-4 py-2 rounded-md hover:scale-105 hover:bg-green-600"
+          onClick={() => setTaskModal(true)}
+          className="flex gap-2 items-center justify-center bg-gray-900 cursor-pointer px-4 py-2 rounded-md hover:scale-105 hover:bg-green-600"
         >
           <Plusicon /> Add Task
         </button>
       </div>
+
+      {/* Task Modal */}
+      {taskModal && (
+        <div className="absolute top-2/3 -translate-y-2/3 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-indigo-900 rounded-xl p-4 flex items-center justify-center flex-col gap-3">
+          <MdCancel
+            className="absolute top-2 right-2 size-6 cursor-pointer hover:text-red-600"
+            onClick={() => {
+              setTaskContent("");
+              setTaskModal(false);
+              handleSelect("");
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Task Content"
+            className="w-[90%] h-12 px-4 bg-indigo-500 outline-none rounded-lg"
+            onChange={(e) => setTaskContent(e.target.value)}
+          />
+          <p>Priority:</p>
+          <div className="w-[90%] flex items-center justify-between">
+            {["High", "Mid", "Low"].map((priority) => (
+              <button
+                key={priority}
+                className={`px-4 py-2 rounded-md bg-violet-300 text-black cursor-pointer hover:bg-violet-500 ${
+                  activePriority === priority ? "!bg-green-500 text-white" : ""
+                }`}
+                onClick={() => handleSelect(priority)}
+              >
+                {priority}
+              </button>
+            ))}
+          </div>
+          <button
+            className="px-8 py-2 bg-green-300 rounded-md text-black hover:bg-green-600 cursor-pointer"
+            onClick={() => addTask(column.id)}
+          >
+            Add
+          </button>
+        </div>
+      )}
     </div>
   );
 };
