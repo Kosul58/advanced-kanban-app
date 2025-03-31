@@ -1,36 +1,6 @@
-import mongoose from "mongoose";
 import User from "./database/user.cjs";
-import dotenv from "dotenv";
-dotenv.config();
-
-// Updated MongoDB connection URI
-const mongoURI = process.env.MONGODB_URI;
-
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("MongoDB connected successfully");
-  } catch (error) {
-    console.error("MongoDB connection error:", error.message);
-    process.exit(1); // Exit process on failure
-  }
-};
-
-const closeConn = async () => {
-  try {
-    await mongoose.connection.close();
-    console.log("MongoDB connection closed");
-  } catch (error) {
-    console.error("MongoDB connection close error:", error.message);
-  }
-};
 
 const pagereload = async (uid, control, column) => {
-  await connectDB();
   try {
     const presentDate = new Date().toISOString().split("T")[0];
     // console.log(presentDate);
@@ -51,8 +21,6 @@ const pagereload = async (uid, control, column) => {
   } catch (error) {
     console.error("Error fetching data:", error.message);
     return [];
-  } finally {
-    await closeConn();
   }
 };
 

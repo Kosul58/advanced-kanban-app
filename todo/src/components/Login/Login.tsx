@@ -7,7 +7,8 @@ const Login = () => {
   const [signup, setSignup] = useState<boolean>(true);
   const [logged, setLogged] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [throttle, setThrottle] = useState<boolean>(false);
+  const [lthrottle, setLThrottle] = useState<boolean>(false);
+  const [sthrottle, setSThrottle] = useState<boolean>(false);
   const [columnx, setColumnx] = useState<Column[]>([]);
   const [taskz, setTaskz] = useState<Task[]>([]);
 
@@ -32,11 +33,11 @@ const Login = () => {
     //     call = false;
     //   }, delay);
     // }
-    if (!throttle) {
-      setThrottle(true);
+    if (!lthrottle) {
+      setLThrottle(true);
       setTimeout(() => {
-        setThrottle(false);
-      }, 4000);
+        setLThrottle(false);
+      }, 2000);
     } else {
       return;
     }
@@ -54,7 +55,7 @@ const Login = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/login?name=${x}&password=${y}`,
+        `http://localhost:3000/taskapi/login?name=${x}&password=${y}`,
         { method: "GET" }
       );
       if (!response.ok) {
@@ -64,7 +65,7 @@ const Login = () => {
       const data = await response.json();
 
       const response2 = await fetch(
-        `http://localhost:3000/gettaskdata?userid=${data._id}`
+        `http://localhost:3000/taskapi/gettaskdata?userid=${data._id}`
       );
       const data2 = await response2.json();
       setTaskz(data2);
@@ -103,17 +104,17 @@ const Login = () => {
       return;
     }
 
-    if (!throttle) {
-      setThrottle(true);
+    if (!sthrottle) {
+      setSThrottle(true);
       setTimeout(() => {
-        setThrottle(false);
-      }, 4000);
+        setSThrottle(false);
+      }, 2000);
     } else {
       return;
     }
 
     try {
-      const response = await fetch("http://localhost:3000/register", {
+      const response = await fetch("http://localhost:3000/taskapi/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -146,11 +147,11 @@ const Login = () => {
       setLogged(true);
       setUdata(JSON.parse(data));
     }
-    setLoading(false); // Set loading to false after checking session storage
+    setLoading(false);
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>; // Optional loading state while session data is being checked
+    return <div>Loading...</div>;
   }
 
   return (
@@ -168,14 +169,14 @@ const Login = () => {
       </section>
       {/* Login part */}
       <section
-        className={` flex  flex-col bg-blue-950 w-full h-screen ${
+        className={` flex flex-col bg-black w-full h-screen ${
           !logged ? "flex" : "hidden"
-        }`}
+        } items-center justify-center`}
       >
-        <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2 w-[100%] h-auto bg-inherit rounded-lg flex flex-1 justify-center items-center flex-wrap py-8">
+        <div className="absolute  w-[95%] h-auto rounded-lg flex flex-1 justify-center items-center flex-wrap py-8 bg-red-50 ">
           {/* Login Form */}
           <form
-            className="w-[45vw] h-[75vh] bg-red-200 min-w-[600px] xl:rounded-s-xl max-lg:rounded-t-lg flex flex-col justify-center items-center gap-2 max-[700px]:min-w-[400px] max-[450px]:min-w-[90%]"
+            className="w-[45vw] h-[75vh] min-w-[600px] xl:rounded-s-xl max-lg:rounded-t-lg flex flex-col justify-center items-center gap-2 max-[700px]:min-w-[400px] max-[450px]:min-w-[90%]"
             onSubmit={handleLogin}
           >
             <div
@@ -186,19 +187,19 @@ const Login = () => {
               <input
                 type="text"
                 placeholder="Username"
-                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%] bg-white text-black"
+                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%] bg-cyan-100 text-black"
                 ref={luname}
               />
               <input
                 type="password"
                 placeholder="Password"
-                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]   bg-white text-black"
+                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]   bg-cyan-100 text-black"
                 ref={lpwd}
               />
             </div>
             <button
               type="submit"
-              className="w-24 h-10 bg-orange-500 rounded-lg hover:bg-green-400 hover:scale-110"
+              className="w-24 h-10 bg-orange-500 rounded-lg hover:bg-green-400 hover:scale-110 cursor-pointer"
             >
               Login
             </button>
@@ -206,7 +207,7 @@ const Login = () => {
 
           {/* Signup Form */}
           <form
-            className="w-[45vw] h-[75vh] bg-yellow-200 min-w-[600px] xl:rounded-e-xl max-lg:rounded-b-lg flex flex-col justify-center items-center gap-2 max-[700px]:min-w-[400px] max-[450px]:min-w-[90%]"
+            className="w-[45vw] h-[100%] min-w-[600px] xl:rounded-e-xl max-lg:rounded-b-lg flex flex-col justify-center items-center gap-2 max-[700px]:min-w-[400px] max-[450px]:min-w-[90%] "
             onSubmit={handleSignup}
           >
             <div
@@ -217,31 +218,31 @@ const Login = () => {
               <input
                 type="text"
                 placeholder="Username"
-                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]  bg-white text-black"
+                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]  bg-cyan-100 text-black"
                 ref={suname}
               />
               <input
                 type="email"
                 placeholder="kosul@nike.com"
-                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]  bg-white text-black"
+                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]   bg-cyan-100  text-black"
                 ref={semail}
               />
               <input
                 type="password"
                 placeholder="Password"
-                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]  bg-white text-black"
+                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]   bg-cyan-100 text-black"
                 ref={spwd}
               />
               <input
                 type="password"
                 placeholder="Confirm Password"
-                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]  bg-white text-black"
+                className="w-[60%] h-[50px] px-3 rounded-lg max-[700px]:min-w-[80%]   bg-cyan-100 text-black"
                 ref={scpwd}
               />
             </div>
             <button
               type="submit"
-              className="w-24 h-10 bg-black rounded-lg hover:bg-green-400 hover:scale-110"
+              className="w-24 h-10 bg-black rounded-lg hover:bg-green-400 hover:scale-110 cursor-pointer"
             >
               Signup
             </button>

@@ -20,15 +20,6 @@ const connectDB = async () => {
   }
 };
 
-const closeConn = async () => {
-  try {
-    await mongoose.connection.close();
-    console.log("MongoDB connection closed");
-  } catch (error) {
-    console.error("MongoDB connection close error:", error.message);
-  }
-};
-
 const users = async (uinfo, control) => {
   await connectDB();
   try {
@@ -75,8 +66,6 @@ const users = async (uinfo, control) => {
   } catch (error) {
     console.error("Error fetching data:", error.message);
     return [];
-  } finally {
-    await closeConn();
   }
 };
 

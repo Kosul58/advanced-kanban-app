@@ -27,3 +27,20 @@ body {
 .task::-webkit-scrollbar-track {
   background-color: transparent;
 }
+
+.loading-spinner {
+  border: 8px solid rgba(0, 0, 0, 0.1); /* Light gray border */
+  border-top: 8px solid #ffffff; /* White border for the spinner */
+  width: 100px; /* Size of the spinner */
+  height: 100px; /* Size of the spinner */
+  animation: spin 0.5s linear infinite; /* Spin animation */
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

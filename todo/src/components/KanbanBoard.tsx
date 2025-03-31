@@ -4,6 +4,9 @@ import { Column, Id, Task } from "../types";
 import ColumnContainer from "./ColumnContainer";
 import Calendar from "./Calendar/Calendar";
 // import { columnss } from "../data/data";
+import { tailspin } from "ldrs";
+
+tailspin.register();
 
 import {
   DndContext,
@@ -70,7 +73,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const ColumnInDb = async (type: string, col: Column) => {
     const uid = sessionStorage.getItem("userid");
     if (type === "add") {
-      const response = await fetch("http://localhost:3000/putcolindb", {
+      const response = await fetch("http://localhost:3000/taskapi/putcolindb", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,7 +83,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       const data = await response.json();
       console.log(data);
     } else if (type === "delete") {
-      const response = await fetch("http://localhost:3000/putcolindb", {
+      const response = await fetch("http://localhost:3000/taskapi/putcolindb", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -248,7 +251,19 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (col.id !== id) return col;
       return { ...col, title };
     });
-
+    const userid = sessionStorage.getItem("userid");
+    const updateColTitle = await fetch(
+      "http://localhost:3000/taskapi/updatecol",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ colid: id, title: title, userid: userid }),
+      }
+    );
+    const response = await updateColTitle.json();
+    console.log(response);
     console.log("column lai update gar");
     setColumns(newColumns);
   };
@@ -272,7 +287,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setTask([...task, newTask]);
 
     // console.log(newTask);
-    const response = await fetch(`http://localhost:3000/addtask`, {
+    const response = await fetch(`http://localhost:3000/taskapi/addtask`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -287,14 +302,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setTask(newTasks);
 
     const tasktodelete = task.filter((task) => task.id === id);
-    const response = await fetch(`http://localhost:3000/deletetask`, {
-      method: "POST",
+    const response = await fetch(`http://localhost:3000/taskapi/deletetask`, {
+      method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(tasktodelete[0]),
     });
     const data = await response.json();
+    console.log(data);
   };
 
   const updateTask = async (id: Id, content: string) => {
@@ -303,14 +319,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       return { ...task, content };
     });
     setTask(newTasks);
-    const response = await fetch(`http://localhost:3000/updatetask`, {
-      method: "POST",
+    const response = await fetch(`http://localhost:3000/taskapi/updatetask`, {
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ id, content }),
     });
     const data = await response.json();
+    console.log(data);
   };
 
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -331,7 +348,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         setPresDate(presentDate);
         const userid = sessionStorage.getItem("userid");
         const response = await fetch(
-          `http://localhost:3000/pagereload?id=${userid}`
+          `http://localhost:3000/taskapi/pagereload?id=${userid}`
         );
 
         const data = await response.json();
@@ -363,57 +380,95 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     sessionStorage.removeItem("username");
     sessionStorage.removeItem("userid");
+    const logout = await fetch("http://localhost:3000/taskapi/logoutuser", {
+      method: "GET",
+    });
+    const data = await logout.json();
+    console.log(data);
     setLogged(false);
   };
 
+  const replacetasksindb = async () => {
+    const userid = sessionStorage.getItem("userid");
+    const response = await fetch("http://localhost:3000/taskapi/replacetasks", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ task, userid }),
+    });
+    const data = await response.json();
+    settaskondrag(false);
+  };
+
+  useEffect(() => {
+    if (taskondrag === false) return;
+    replacetasksindb();
+  }, [task]);
+
+  const [loader, setLoader] = useState(true);
   //fetch page data on page reload
   useEffect(() => {
     const getuserdata = async () => {
-      const uid = sessionStorage.getItem("userid");
-      if (!uid) {
-        return;
-      }
-      const presentDate = new Date().toISOString().split("T")[0];
-      setPresDate(presentDate);
-      let [x, y, z] = presentDate.split("-").map((x) => Number(x));
-      const userid = sessionStorage.getItem("userid");
-      const response = await fetch(
-        `http://localhost:3000/pagereload?id=${userid}`
-      );
-      const data = await response.json();
-      const newcol1 = data.Column.filter((x: any) => {
-        if (x.id <= 3) {
-          return x;
+      try {
+        const uid = sessionStorage.getItem("userid");
+        if (!uid) {
+          return;
         }
-      });
-      const newcol2 = data.Column.filter((val: any) => {
-        if (val.id > 3) {
-          let [a, b, c] = val.date.split("-").map((t: string) => Number(t));
-          if (a === x && b === y && c === z) {
-            return val;
+        const presentDate = new Date().toISOString().split("T")[0];
+        setPresDate(presentDate);
+        let [x, y, z] = presentDate.split("-").map((x) => Number(x));
+        const userid = sessionStorage.getItem("userid");
+        const response = await fetch(
+          `http://localhost:3000/taskapi/pagereload?id=${userid}`
+        );
+        const data = await response.json();
+        const newcol1 = data.Column.filter((x: any) => {
+          if (x.id <= 3) {
+            return x;
           }
-        }
-      });
-      console.log(newcol1, newcol2);
-      const totalcol = [...newcol1, ...newcol2];
-      setColumns(totalcol);
+        });
+        const newcol2 = data.Column.filter((val: any) => {
+          if (val.id > 3) {
+            let [a, b, c] = val.date.split("-").map((t: string) => Number(t));
+            if (a === x && b === y && c === z) {
+              return val;
+            }
+          }
+        });
+        console.log(newcol1, newcol2);
+        const totalcol = [...newcol1, ...newcol2];
+        setColumns(totalcol);
 
-      const response2 = await fetch(
-        `http://localhost:3000/gettaskdata?userid=${uid}`
-      );
-      const data2 = await response2.json();
-      if (data2 !== "no tasks") {
-        console.log(data2);
-        setTask((prev) => [...data2]);
+        const response2 = await fetch(
+          `http://localhost:3000/taskapi/gettaskdata?userid=${uid}`
+        );
+        const data2 = await response2.json();
+        if (data2 !== "no tasks") {
+          console.log(data2);
+          setTask((prev) => [...data2]);
+        }
+        console.log("data reloaded succesfully");
+      } catch (e) {
+        console.log("error : ", e);
+      } finally {
+        setLoader(false);
       }
-      console.log("data reloaded succesfully");
     };
     getuserdata();
     // gettask();
   }, []);
+
+  if (loader) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-black w-full">
+        <div className="loading-spinner  rounded-full "></div>
+      </div>
+    );
+  }
 
   // const gettask = async () => {
   //   const uid = sessionStorage.getItem("userid");
@@ -427,25 +482,6 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   //   }
   // };
 
-  const replacetasksindb = async () => {
-    const userid = sessionStorage.getItem("userid");
-    const response = await fetch("http://localhost:3000/replacetasks", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ task, userid }),
-    });
-    const data = await response.json();
-    console.log("xx");
-    settaskondrag(false);
-  };
-
-  useEffect(() => {
-    if (taskondrag === false) return;
-    replacetasksindb();
-  }, [task]);
-
   return (
     <div className="m-auto flex min-h-screen w-full items-center overflow-x-auto overflow-y-hidden">
       <DndContext
@@ -455,7 +491,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragOver={onDragOver}
       >
         <div className="m-auto flex gap-4  w-full h-screen items-center justify-center px-5 ">
-          <main className="flex gap-4 w-[80%] h-[90%] bg-gray-800 flex-wrap overflow-auto items-center justify-center p-4 rounded-xl">
+          <main className="flex gap-4 w-[80%] h-[100%]  flex-wrap overflow-auto items-center justify-center p-4 rounded-xl">
             <SortableContext items={columnsId}>
               {columns.map((col) => (
                 <ColumnContainer

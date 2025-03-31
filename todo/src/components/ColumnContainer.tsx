@@ -29,7 +29,8 @@ const ColumnContainer = (props: Props) => {
     task,
   } = props;
 
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [colTitle, setColTitle] = useState<string>(column.title);
 
   const {
     setNodeRef,
@@ -107,13 +108,18 @@ const ColumnContainer = (props: Props) => {
             column.title
           ) : (
             <input
-              value={column.title}
-              onChange={(e) => updateColumn(column.id, e.target.value)}
+              value={colTitle}
+              onChange={(e) => setColTitle(e.target.value)}
               autoFocus
-              onBlur={() => setEditMode(false)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
+              onBlur={() => {
                 setEditMode(false);
+                updateColumn(column.id, colTitle);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setEditMode(false);
+                  updateColumn(column.id, colTitle);
+                }
               }}
               className="px-4 outline-indigo-600"
             />
